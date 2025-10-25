@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cotiza tu pedido - Dulce Encanto</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #fff8f8; color: #333; }
+    header, footer { text-align: center; padding: 20px; background: #ffb6c1; }
+    form { max-width: 700px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    label { display: block; margin-top: 10px; font-weight: bold; }
+    select, input, textarea { width: 100%; padding: 8px; margin-top: 4px; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
+    button { margin-top: 20px; background: #ff69b4; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+    button:hover { background: #ff4081; }
+    #resultado { margin-top: 20px; font-weight: bold; font-size: 1.1em; text-align: center; }
+    #whatsappBtn { display: none; background: #25D366; color: white; border: none; padding: 10px 16px; border-radius: 5px; cursor: pointer; }
+    #whatsappBtn:hover { background: #1ebe5d; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Cotiza tu Pedido </h1>
+    <nav><a href="index.html">Volver al inicio</a></nav>
+  </header>
+
+  <section id="cotizar" style="padding: 40px 20px;">
+    <form id="formCotizar">
+      <label>Nombre del cliente:</label>
+      <input type="text" id="nombre" required>
+
+      <label>Fecha de entrega:</label>
+      <input type="date" id="fechaEntrega" required>
+
+      <label>Dirección de envío:</label>
+      <textarea id="direccion" rows="2" required></textarea>
+
+      <label>Selecciona el tipo de producto:</label>
+      <select id="tipoProducto" required>
+        <option value="">Seleccionar...</option>
+        <option value="pastel">Pastel</option>
+        <option value="cupcakes">Cupcakes</option>
+        <option value="cepelin">Cepelín</option>
+        <option value="pie">Pie</option>
+      </select>
+
+      <!-- Complementos dinámicos -->
+      <div id="complementos"></div>
+
+      <button type="submit">Calcular total</button>
+    </form>
+
+    <div id="resultado"></div>
+
+    <div style="text-align:center; margin-top:12px;">
+      <button id="whatsappBtn"> Enviar pedido por WhatsApp</button>
+    </div>
+  </section>
+
+  <footer>
+    <p>© 2025 Dulce Encanto - Todos los derechos reservados</p>
+  </footer>
+
+  <script>
+    const complementosDiv = document.getElementById('complementos');
+    const tipoProducto = document.getElementById('tipoProducto');
+    const resultado = document.getElementById('resultado');
+    const whatsappBtn = document.getElementById('whatsappBtn');
+
+    const precios = {
+      pastel: {
+        relleno: { "sin relleno": 0, fresa: 2, piña: 2, caramelo: 3, mora: 3, manjar: 4 },
+        molde: { "6 personas": 10, "12 personas": 18, "20 personas": 25 },
+        niveles: 5
+      },
+      cupcakes: {
+        sabor: { vainilla: 1.5, chocolate: 2, napolitano: 2.5, arcoiris: 3 },
+      },
+      cepelin: {
+        sabor: { zanahoria: 3, banano: 2.5, vainilla: 2, chocolate: 2.5 },
+      },
+      pie: {
+        relleno: { manzana: 3, pera: 3, piña: 2.5, mora: 3 }
+      }
+    };
+
+    let orderData = null;
+
+    tipoProducto.addEventListener('change', () => {
+      const tipo = tipoProducto.value;
+      complementosDiv.innerHTML = '';
+      resultado.innerHTML = '';
+      whatsappBtn.style.display = 'none';
+      orderData = null;
+
+      if (tipo === 'pastel') {
+        complementosDiv.innerHTML = `
+          <label>Para quién es (nombre en el pastel):</label>
+          <input id="paraQuien" type="text">
+
+          <label>Relleno:</label>
+          <select id="relleno">${crearOpciones(precios.pastel.relleno)}</select>
+
+          <label>Molde (personas):</label>
+          <select id="molde">${crearOpciones(precios.pastel.molde)}</select>
+
+          <label>Niveles:</label>
+          <input type="number" id="niveles" min="1" value="1">
+        `;
+      }
+
+      if (tipo === 'cupcakes') {
+        complementosDiv.innerHTML = `
+          <label>Para quién (nota):</label>
+          <input id="paraQuien" type="text">
+
+          <label>Sabor de masa:</label>
+          <select id="sabor">${crearOpciones(precios.cupcakes.sabor)}</select>
+
+          <label>Cantidad:</label>
+          <input type="number" id="cantidad" min="1" value="12">
+        `;
+      }
+
+      if (tipo === 'cepelin') {
+        complementosDiv.innerHTML = `
+          <label>Para quién (nota):</label>
+          <input id="paraQuien" type="text">
+
+          <label>Sabor:</label>
+          <select id="sabor">${crearOpciones(precios.cepelin.sabor)}</select>
+
+          <label>Cantidad de cepelines:</label>
+          <input type="number" id="cantidad" min="1" value="1">
+        `;
+      }
+
+      if (tipo === 'pie') {
+        complementosDiv.innerHTML = `
+          <label>Para quién (nota):</label>
+          <input id="paraQuien" type="text">
+
+          <label>Relleno:</label>
+          <select id="relleno">${crearOpciones(precios.pie.relleno)}</select>
+
+          <label>Cantidad:</label>
+          <input type="number" id="cantidad" min="1" value="1">
+        `;
+      }
+    });
+
+    function crearOpciones(obj) {
+      return Object.entries(obj)
+        .map(([nombre, precio]) => `<option value="${nombre}">${nombre} - $${precio}</option>`)
+        .join('');
+    }
+
+    document.getElementById('formCotizar').addEventListener('submit', e => {
+      e.preventDefault();
+
+      const nombre = document.getElementById('nombre').value.trim();
+      const fecha = document.getElementById('fechaEntrega').value;
+      const direccion = document.getElementById('direccion').value.trim();
+      const tipo = tipoProducto.value;
+
+      if (!nombre || !fecha || !direccion || !tipo) {
+        alert('Por favor completa nombre, fecha, dirección y tipo de producto.');
+        return;
+      }
+
+      let total = 0;
+      let detalles = {};
+
+      if (tipo === 'pastel') {
+        const paraQuien = safeGetValue('paraQuien');
+        const relleno = safeGetValue('relleno');
+        const molde = safeGetValue('molde');
+        const niveles = parseInt(safeGetValue('niveles') || '1');
+        total = precios.pastel.relleno[relleno] + precios.pastel.molde[molde] + (niveles - 1) * precios.pastel.niveles;
+        detalles = { paraQuien, relleno, molde, niveles };
+      } else if (tipo === 'cupcakes') {
+        const paraQuien = safeGetValue('paraQuien');
+        const sabor = safeGetValue('sabor');
+        const cantidad = parseInt(safeGetValue('cantidad') || '0');
+        total = precios.cupcakes.sabor[sabor] * cantidad;
+        detalles = { paraQuien, sabor, cantidad };
+      } else if (tipo === 'cepelin') {
+        const paraQuien = safeGetValue('paraQuien');
+        const sabor = safeGetValue('sabor');
+        const cantidad = parseInt(safeGetValue('cantidad') || '0');
+        total = precios.cepelin.sabor[sabor] * cantidad;
+        detalles = { paraQuien, sabor, cantidad };
+      } else if (tipo === 'pie') {
+        const paraQuien = safeGetValue('paraQuien');
+        const relleno = safeGetValue('relleno');
+        const cantidad = parseInt(safeGetValue('cantidad') || '0');
+        total = precios.pie.relleno[relleno] * cantidad;
+        detalles = { paraQuien, relleno, cantidad };
+      }
+
+      orderData = { nombre, fecha, direccion, tipo, detalles, total };
+
+      resultado.innerHTML = ` Total estimado: <strong>$${total.toFixed(2)}</strong>`;
+      whatsappBtn.style.display = 'inline-block';
+    });
+
+    function safeGetValue(id) {
+      const el = document.getElementById(id);
+      return el ? el.value : '';
+    }
+
+    whatsappBtn.addEventListener('click', () => {
+      if (!orderData) {
+        alert('Primero calcula el total.');
+        return;
+      }
+
+      const d = orderData.detalles;
+      const detallesTexto = Object.entries(d)
+        .map(([k, v]) => `${k}: ${v || '-'}`)
+        .join(', ');
+
+      const mensaje = 
+`*Nuevo pedido - Dulce Encanto* 
+
+ Nombre cliente: ${orderData.nombre}
+ Fecha entrega: ${orderData.fecha}
+ Dirección: ${orderData.direccion}
+ Producto: ${orderData.tipo}
+ Detalles: ${detallesTexto}
+ Total estimado: $${orderData.total.toFixed(2)}
+
+ Si tienes una imagen de referencia para hacerle su pastel por favor adjúntala en este mensaje.
+
+ Favor confirmar el pedido.`;
+
+      const numero = '50235974265';
+      const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`;
+      window.open(url, '_blank');
+    });
+  </script>
+</body>
+</html>
